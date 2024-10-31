@@ -1,0 +1,69 @@
+import folium  # 지도 생성 및 마커 추가를 위한 라이브러리
+import pandas as pd  # 엑셀 데이터를 읽고 처리하는 라이브러리
+import glob  # 특정 폴더에서 파일 목록을 가져오는 데 사용
+import random  # 마커 위치에 랜덤 오프셋을 주기 위해 사용
+from google.colab import files  # Colab 환경에서 파일을 다운로드하기 위해 사용
+
+# 경기도의 중심 좌표 설정 (위도, 경도)
+gyeonggi_center = [37.413294, 127.518303]
+
+# 지도 생성 - 지도 스타일 적용
+m = folium.Map(location=gyeonggi_center, zoom_start=9, tiles='CartoDB dark_matter')
+
+# 'data' 폴더에 있는 모든 엑셀 파일의 경로를 가져옴
+excel_files = glob.glob('/content/data/*.xlsx')
+
+# 각 종에 따른 아이콘 이미지 경로 설정
+# 예시로 종 이름을 키로, 해당 종의 아이콘 이미지 경로를 값으로 사용
+icon_images = {
+    '수달': '/content/icon/수달.png', 
+    '담비': '/content/icon/담비.png',
+    # ...(생략)... 여러 종에 대한 아이콘 경로 설정
+    '하늘다람쥐': '/content/icon/하늘다람쥐.png',
+}
+
+# 각 엑셀 파일에서 데이터를 읽어서 지도에 표시
+for file in excel_files:
+    # 엑셀 파일을 데이터프레임으로 읽기
+    df = pd.read_excel(file)
+
+    # 각 행에서 필요한 정보를 추출
+    for _, row in df.iterrows():
+        try:
+            # 위도와 경도 값(A열, B열)
+            latitude = float(row.iloc[0])  # A열: 위도
+            longitude = float(row.iloc[1])  # B열: 경도
+        except (ValueError, IndexError):  # 값이 유효하지 않을 때
+            continue
+
+        # 종 데이터는 E열 이후에 있다고 가정하고 추출
+        species_info = row.iloc[4:]  # E열 이후의 모든 데이터를 가져옴
+        species_list = species_info.dropna().tolist()  # NaN 값을 제거하고 리스트로 변환
+
+        # 위도와 경도 값이 유효한지 확인
+        if pd.notna(latitude) and pd.notna(longitude):
+            # 종별로 지도에 마커 추가
+            for species in species_list:
+                # 종에 맞는 아이콘 이미지 설정
+                icon_image = icon_images.get(species)
+
+                # 아이콘이 없는 종은 마커 추가 생략
+                if icon_image is None:
+                    continue
+
+                # 마커 위치에 약간의 랜덤 오프셋 추가 (마커가 겹치지 않도록)
+                offset_latitude = latitude + random.uniform(-0.002, 0.002)
+                offset_longitude = longitude + random.uniform(-0.002, 0.002)
+
+                # 사용자 정의 아이콘으로 마커 추가
+                folium.Marker(
+                    location=[offset_latitude, offset_longitude],
+                    popup=species,  # 마커 클릭 시 종 이름 표시
+                    icon=folium.CustomIcon(icon_image=icon_image, icon_size=(20, 20))  # 아이콘 크기 설정
+                ).add_to(m)
+
+# 완성된 지도를 HTML 파일로 저장
+m.save('gyeonggi_endangered_species_map.html')
+
+# Colab에서 HTML 파일을 다운로드
+files.download('gyeonggi_endangered_species_map.html')
