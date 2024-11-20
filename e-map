@@ -4,16 +4,13 @@ import glob
 import random
 from google.colab import files
 
-# 경기도 중심 좌표 설정
 gyeonggi_center = [37.413294, 127.518303]
-
-# 검은 배경 지도를 생성
 m = folium.Map(location=gyeonggi_center, zoom_start=9, tiles='CartoDB dark_matter')
 
-# 'data' 폴더의 엑셀 파일 경로 설정
-excel_files = glob.glob('/content/data/*.xlsx')  # 'data' 폴더의 모든 엑셀 파일 가져오기
 
-# 각 종에 따른 아이콘 이미지 경로 설정 (예시)
+excel_files = glob.glob('/content/data/*.xlsx')
+
+
 icon_images = {
     '수달': '/content/icon/수달.png', 
     '담비': '/content/icon/담비.png',
@@ -65,45 +62,41 @@ icon_images = {
     '하늘다람쥐': '/content/icon/하늘다람쥐.png',
 }
 
-# 각 엑셀 파일에서 데이터 읽기
-for file in excel_files:
-    df = pd.read_excel(file)  # 엑셀 파일 읽기
 
-    # 데이터에서 필요한 열 추출
+for file in excel_files:
+    df = pd.read_excel(file)  
+
+
     for _, row in df.iterrows():
-        # A열과 B열에서 위도와 경도 값 가져오기
         try:
-            latitude = float(row.iloc[0])  # A열: 위도
-            longitude = float(row.iloc[1])  # B열: 경도
+            latitude = float(row.iloc[0])  
+            longitude = float(row.iloc[1])  
         except (ValueError, IndexError):  # 유효하지 않은 값이거나 인덱스 오류가 발생한 경우
             continue
 
-        # E열 이후의 데이터 가져오기
-        species_info = row.iloc[4:]  # E열 이후의 모든 데이터
-        species_list = species_info.dropna().tolist()  # NaN 값을 제거하고 리스트로 변환
 
-        # 위도와 경도가 모두 유효한지 확인
+        species_info = row.iloc[4:] 
+        species_list = species_info.dropna().tolist() 
+
         if pd.notna(latitude) and pd.notna(longitude):
-            # 종별로 마커 추가
-            for species in species_list:
-                # 종에 따른 아이콘 이미지 선택
-                icon_image = icon_images.get(species)  # 기본 아이콘 설정
 
-                # 아이콘 이미지가 없는 경우 마커 추가하지 않음
+            for species in species_list:
+           
+                icon_image = icon_images.get(species) 
+
                 if icon_image is None:
                     continue
 
-                # 랜덤한 오프셋을 주어 마커 위치 조정 (0.002로 확대)
-                offset_latitude = latitude + random.uniform(-0.002, 0.002)  # 위도 약간 오프셋
-                offset_longitude = longitude + random.uniform(-0.002, 0.002)  # 경도 약간 오프셋
+     
+                offset_latitude = latitude + random.uniform(-0.002, 0.002) 
+                offset_longitude = longitude + random.uniform(-0.002, 0.002) 
 
-                # 사용자 정의 아이콘으로 마커 추가
+       
                 folium.Marker(
                     location=[offset_latitude, offset_longitude],
-                    popup=species,  # 종 이름만 표시
-                    icon=folium.CustomIcon(icon_image=icon_image, icon_size=(20, 20))  # 아이콘 크기 조정
+                    popup=species, 
+                    icon=folium.CustomIcon(icon_image=icon_image, icon_size=(20, 20))  
                 ).add_to(m)
 
-# 지도 HTML 파일로 저장
 m.save('gyeonggi_endangered_species_map.html')
 files.download('gyeonggi_endangered_species_map.html')
